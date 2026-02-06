@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ── RESET ── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f6fa;
+  color: #23272f;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── LOADING STATE ── */
+#loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  color: #666;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── CONTAINER ── */
+#worksPapersWidget {
+  display: none;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+#worksPapersWidget.loaded { display: block; }
+
+/* ── HEADER ── */
+.w-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.w-header img {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+}
+.w-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  flex: 1;
+}
+
+/* ── SEARCH ── */
+.w-searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+#wSearch {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1.5px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: .9rem;
+  outline: none;
+  transition: border-color .2s;
+}
+#wSearch:focus { border-color: #1a73e8; }
+#wCount {
+  font-size: .85rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* ── LAYOUT: LIST + DETAIL ── */
+.w-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* ── LIST ── */
+.w-listCol {
+  width: 340px;
+  min-width: 280px;
+  flex-shrink: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #fff;
+}
+#wList {
+  list-style: none;
+  padding: 4px;
+}
+
+/* ── LIST ITEM ── */
+.w-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background .15s;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+.w-item:hover { background: #f0f4ff; }
+.w-item.active {
+  background: #e8eef9;
+  border-left: 3px solid #1a73e8;
+}
+.w-itemTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.w-item .t {
+  font-weight: 600;
+  font-size: .88rem;
+  line-height: 1.35;
+  flex: 1;
+}
+.w-item .m {
+  font-size: .78rem;
+  color: #777;
+  margin-top: 4px;
+}
+.w-badges {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.w-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #eef1f6;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+}
+
+/* ── DETAIL PANEL ── */
+.w-detailCol {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 24px;
+}
+#wTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+}
+#wAuthors {
+  font-size: .88rem;
+  color: #555;
+  margin-bottom: 4px;
+}
+#wYear {
+  font-size: .85rem;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+/* ── CHIPS ── */
+#wChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  background: #e3ecfa;
+  color: #1a56db;
+  font-size: .78rem;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+/* ── DOI BUTTON ── */
+#wDoiBtn {
+  display: inline-block;
+  padding: 6px 16px;
+  background: #1a73e8;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: .82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  transition: background .2s;
+}
+#wDoiBtn:hover { background: #1557b0; }
+
+/* ── ABSTRACT ── */
+.w-sectionLabel {
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #999;
+  margin: 16px 0 6px;
+}
+#wAbstract {
+  font-size: .88rem;
+  line-height: 1.65;
+  color: #444;
+}
+
+/* ── IMAGE ── */
+#wImageBox {
+  margin: 16px 0 8px;
+  text-align: center;
+}
+#wImageBox img {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+.imgEmpty {
+  height: 120px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imgEmpty::after {
+  content: "Gorsel yok";
+  color: #aaa;
+  font-size: .8rem;
+}
+#wFigNote {
+  font-size: .8rem;
+  color: #888;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── RESULTS ── */
+#wResults {
+  padding-left: 18px;
+  font-size: .88rem;
+  color: #444;
+}
+#wResults li { margin-bottom: 6px; }
+
+/* ── NOTE ── */
+#wNote {
+  font-size: .85rem;
+  color: #666;
+  background: #fdf8e8;
+  border-left: 3px solid #f0c040;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 720px) {
+  .w-body { flex-direction: column; }
+  .w-listCol { width: 100%; max-height: 40vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading durumu: Velo'dan veri gelene kadar gösterilir -->
+<div id="loadingState">
+  <div class="spinner"></div>
+  <span>Makaleler yukleniyor...</span>
+</div>
+
+<!-- Ana widget: Veri gelince görünür hale gelir -->
+<div id="worksPapersWidget">
+
+  <!-- Header / Logolar -->
+  <div class="w-header">
+    <img id="logoKtu" src="" alt="KTU" style="display:none">
+    <img id="logoManyetam" src="" alt="Manyetam" style="display:none">
+    <h2>Akademik Yayinlar</h2>
+  </div>
+
+  <!-- Arama -->
+  <div class="w-searchBar">
+    <input type="text" id="wSearch" placeholder="Baslik, yazar, DOI ile ara...">
+    <span id="wCount">0 adet</span>
+  </div>
+
+  <!-- Govde: Liste + Detay -->
+  <div class="w-body">
+
+    <!-- Sol: Makale Listesi -->
+    <div class="w-listCol">
+      <div id="wList" role="listbox" aria-label="Makale listesi"></div>
+    </div>
+
+    <!-- Sag: Detay Paneli -->
+    <div class="w-detailCol">
+      <div id="wTitle"></div>
+      <div id="wAuthors"></div>
+      <div id="wYear"></div>
+      <div id="wChips"></div>
+      <a id="wDoiBtn" href="#" target="_blank" rel="noopener">DOI</a>
+
+      <div class="w-sectionLabel">Ozet</div>
+      <div id="wAbstract"></div>
+
+      <div id="wImageBox"></div>
+      <div id="wFigNote" style="display:none"></div>
+
+      <div class="w-sectionLabel">Bulgular</div>
+      <ul id="wResults"></ul>
+
+      <div id="wNote" style="display:none"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// WIDGET JS — postMessage ile Velo'dan veri alır
+// ─────────────────────────────────────────────────────────
+(function(){
+  var articles = [];
+  var logos = {};
+  var activeId = null;
+
+  // ── DOM referansları ──
+  var root      = document.getElementById("worksPapersWidget");
+  var loading   = document.getElementById("loadingState");
+  var listEl    = document.getElementById("wList");
+  var searchEl  = document.getElementById("wSearch");
+  var countEl   = document.getElementById("wCount");
+  var titleEl   = document.getElementById("wTitle");
+  var authorsEl = document.getElementById("wAuthors");
+  var yearEl    = document.getElementById("wYear");
+  var chipsEl   = document.getElementById("wChips");
+  var doiBtnEl  = document.getElementById("wDoiBtn");
+  var absEl     = document.getElementById("wAbstract");
+  var imgBoxEl  = document.getElementById("wImageBox");
+  var figNoteEl = document.getElementById("wFigNote");
+  var resEl     = document.getElementById("wResults");
+  var noteEl    = document.getElementById("wNote");
+
+  // ── Yardımcı fonksiyonlar ──
+  function setText(el, v) { if(el) el.textContent = v ?? ""; }
+
+  function setMaybe(el, v) {
+    var val = (v ?? "").toString().trim();
+    if(!el) return;
+    el.textContent = val;
+    el.style.display = val ? "block" : "none";
+  }
+
+  function hrefFromDoi(doi) {
+    var d = (doi || "").trim();
+    if(!d) return "";
+    if(/^https?:\/\//i.test(d)) return d;
+    return "https://doi.org/" + d;
+  }
+
+  function doiBtnLabel(doi) {
+    var d = (doi || "").trim();
+    if(!d) return "DOI";
+    if(/^https?:\/\//i.test(d) && !/doi\.org/i.test(d)) return "LINK";
+    return "DOI";
+  }
+
+  // ── Liste oluşturma ──
+  function buildList(items) {
+    listEl.innerHTML = "";
+    countEl.textContent = items.length + " adet";
+
+    items.forEach(function(a) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "w-item" + (a.id === activeId ? " active" : "");
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", a.id === activeId ? "true" : "false");
+
+      var firstTag = (a.highlights && a.highlights[0]) ? a.highlights[0] : "Makale";
+      var auth = (a.authors || "").trim();
+      var parts = auth.split(";");
+      var authShort = auth ? parts.slice(0,2).join("; ") + (parts.length > 2 ? "..." : "") : "";
+
+      btn.innerHTML =
+        '<div class="w-itemTop">' +
+          '<div class="t">' + escapeHtml(a.title || "") + '</div>' +
+          '<div class="w-badges">' +
+            '<span class="w-badge">' + escapeHtml(String(a.year ?? "")) + '</span>' +
+            '<span class="w-badge">' + escapeHtml(firstTag) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="m">' + escapeHtml(authShort) + '</div>';
+
+      btn.addEventListener("click", function() {
+        activeId = a.id;
+        buildList(filterArticles(searchEl.value));
+        render(a);
+      });
+
+      listEl.appendChild(btn);
+    });
+  }
+
+  // ── XSS koruması ──
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ── Chips/Etiketler ──
+  function buildChips(a) {
+    chipsEl.innerHTML = "";
+    var arr = a.highlights || [];
+    if(!arr.length) { chipsEl.style.display = "none"; return; }
+    chipsEl.style.display = "flex";
+    arr.forEach(function(h) {
+      var s = document.createElement("span");
+      s.className = "chip";
+      s.textContent = h;
+      chipsEl.appendChild(s);
+    });
+  }
+
+  // ── Bulgular ──
+  function buildResults(a) {
+    resEl.innerHTML = "";
+    (a.results || []).forEach(function(r) {
+      var li = document.createElement("li");
+      li.textContent = r;
+      resEl.appendChild(li);
+    });
+  }
+
+  // ── Görsel ──
+  function buildImage(a) {
+    imgBoxEl.innerHTML = "";
+    if(a.imageUrl) {
+      var img = document.createElement("img");
+      img.src = a.imageUrl;
+      img.alt = a.title || "Makale gorseli";
+      img.loading = "lazy";
+      imgBoxEl.appendChild(img);
+    } else {
+      var empty = document.createElement("div");
+      empty.className = "imgEmpty";
+      imgBoxEl.appendChild(empty);
+    }
+    setMaybe(figNoteEl, a.figureNote || "");
+  }
+
+  // ── Detay render ──
+  function render(a) {
+    setText(titleEl, a.title);
+    setText(authorsEl, a.authors);
+    setText(yearEl, a.year);
+    buildChips(a);
+
+    var href = hrefFromDoi(a.doi);
+    doiBtnEl.href = href || "#";
+    doiBtnEl.textContent = doiBtnLabel(a.doi);
+    doiBtnEl.style.pointerEvents = href ? "auto" : "none";
+    doiBtnEl.style.opacity = href ? "1" : ".45";
+
+    setText(absEl, a.abstract || "");
+    buildImage(a);
+    buildResults(a);
+    setMaybe(noteEl, a.note || "");
+  }
+
+  // ── Filtre/arama ──
+  function filterArticles(q) {
+    q = (q || "").trim().toLowerCase();
+    if(!q) return articles;
+    return articles.filter(function(a) {
+      var hay = [
+        a.title, a.authors, a.doi, String(a.year || ""),
+        (a.highlights || []).join(" ")
+      ].join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  // ── Arama input event ──
+  searchEl.addEventListener("input", function() {
+    var filtered = filterArticles(searchEl.value);
+    if(filtered.length && !filtered.some(function(x){ return x.id === activeId; })) {
+      activeId = filtered[0].id;
+    }
+    buildList(filtered);
+    var cur = filtered.find(function(x){ return x.id === activeId; });
+    if(cur) render(cur);
+  });
+
+  // ── Widget'ı başlat (veri geldiğinde) ──
+  function initWidget(data) {
+    articles = data.articles || [];
+    logos = data.logos || {};
+
+    // Yıla göre sırala
+    articles.sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
+
+    // Logolar
+    var logoKtu = document.getElementById("logoKtu");
+    var logoMany = document.getElementById("logoManyetam");
+    if(logoKtu && logos.ktu) { logoKtu.src = logos.ktu; logoKtu.style.display = "inline"; }
+    if(logoMany && logos.manyetam) { logoMany.src = logos.manyetam; logoMany.style.display = "inline"; }
+
+    // İlk makaleyi seç
+    activeId = articles[0] ? articles[0].id : null;
+
+    // Loading'i gizle, widget'ı göster
+    loading.style.display = "none";
+    root.classList.add("loaded");
+
+    // Listeyi oluştur ve ilk makaleyi göster
+    buildList(articles);
+    if(articles[0]) render(articles[0]);
+  }
+
+  // ─────────────────────────────────────────────────────
+  // Wix postMessage dinleyicisi
+  // Velo tarafından gönderilen mesajları yakalar
+  // ─────────────────────────────────────────────────────
+  window.onmessage = function(event) {
+    if(!event.data) return;
+
+    var msg = event.data;
+
+    // Wix postMessage bazen iç içe gelir
+    if(typeof msg === "string") {
+      try { msg = JSON.parse(msg); } catch(e) { return; }
+    }
+
+    if(msg.type === "articlesData") {
+      initWidget(msg);
+    }
+  };
+
+  // Widget hazır olduğunu Velo'ya bildir
+  // Bu sayede Velo, widget yüklenmeden önce veri gönderdiyse tekrar gönderir
+  window.parent.postMessage({ type: "widgetReady" }, "*");
+
+})();
+</script>
+</body>
+</html>
